@@ -11,6 +11,10 @@ import sys
 def make_me_bold(input_file_path, output_file_path,
                  firstname='Stijn', lastname='Van Hoey'):
     """
+    Change the entries of a specific author from a bib-file into a bold version
+
+    It is assumed that the (single) first name (so, eg Stijn, NOT 'Stijn Thom')
+    or the initial (eg. S.) are directly behind the lastname (cfr. bib-syntax)
     """
     with open(input_file_path, 'r') as inputfile:
         with open(output_file_path, 'w') as outputfile:
@@ -19,13 +23,16 @@ def make_me_bold(input_file_path, output_file_path,
                 if 'textbf' not in line and lastname in line:
                     splitline = line.partition(lastname)
                     # replace last name
-                    boldlast = splitline[1].replace(lastname, ''.join(['\\textbf{', lastname, '}']))
+                    boldlast = splitline[1].replace(
+                        lastname, ''.join(['\\textbf{', lastname, '}']))
                     # replace first name or initial
                     if splitline[2].find(firstname) != -1:
-                        boldfirst = splitline[2].replace(firstname, ''.join(['\\textbf{', firstname, '}']), 1)
+                        boldfirst = splitline[2].replace(
+                            firstname, ''.join(['\\textbf{', firstname, '}']), 1)
                     else:
-                        first_initial =  ''.join([firstname[0],'.'])
-                        boldfirst = splitline[2].replace(first_initial, ''.join(['\\textbf{', first_initial, '}']), 1)
+                        first_initial = ''.join([firstname[0], '.'])
+                        boldfirst = splitline[2].replace(
+                            first_initial, ''.join(['\\textbf{', first_initial, '}']), 1)
                     line = [splitline[0], boldlast, boldfirst]
                 outputfile.write(''.join(line))
 
