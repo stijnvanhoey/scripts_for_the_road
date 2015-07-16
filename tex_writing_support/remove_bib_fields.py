@@ -35,7 +35,6 @@ def remove_fields(infile, outfile, fields):
     if infile[-3:] != 'bib':
         raise Exception('file for modification is not a .bib file')
 
-
     bibfile = open(infile, "r")
     newbibfile = open(outfile, "w")
     for line in bibfile.readlines():
@@ -53,7 +52,7 @@ def main(argv=None):
     fields = ['file', 'issn', 'isbn', 'pmid', 'keywords', 'url', 'month',
               'annote', 'language', 'abstract', 'mendeley-tags']
 
-    #argv[0] is always the file name itself
+    # argv[0] is always the file name itself
     sourcefile = sys.argv[1]
     outfile = sys.argv[2]
     remove_fields(sourcefile, outfile, fields)

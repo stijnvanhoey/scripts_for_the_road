@@ -15,7 +15,7 @@ newtexfile = open("adaptedfile.tex", "w")
 
 for line in texfile.readlines():
     p = re.compile('\\\\replaced{ ( [^}]* ) }{ ( [^}]* ) }', re.VERBOSE)
-    line = p.sub(r'\1',line)
+    line = p.sub(r'\1', line)
 
     q = re.compile('\\\\added{ ( [^}]* ) }', re.VERBOSE)
     line = q.sub(r'\1', line)
