@@ -17,7 +17,7 @@ for line in fileinput.input('D:\Modellen\Version2012\HPC\Article_HESS_Nete_2\Mod
         fnew.write(line[:5])
 #        fnew.write(' ')
         fnew.write('\n')
-   
+
 
 fileinput.close()
 fnew.close()

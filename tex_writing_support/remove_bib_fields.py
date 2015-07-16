@@ -1,4 +1,6 @@
-# -*- coding: utf-8 -*-
+#
+# Copyright (c) 2015 by Stijn Van Hoey. All Rights Reserved.
+#
 """
 Bibtex export from Mendely cleanup
 
