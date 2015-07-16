@@ -58,7 +58,5 @@ def main(argv=None):
     outfile = sys.argv[2]
     remove_fields(sourcefile, outfile, fields)
 
-
 if __name__ == "__main__":
     sys.exit(main())
-
