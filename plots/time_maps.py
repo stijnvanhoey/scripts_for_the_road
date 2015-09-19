@@ -12,72 +12,180 @@
 import datetime
 import numpy as np
 import pandas as pd
-import scipy.ndimage as ndi
 import matplotlib.pylab as plt
+import seaborn as sns
+sns.set(style="ticks")
 
-import requests
-
-def _get_prepost_values(timeserie):
+def _intervals(date_array):
     """
-    """
-    return pre, post
+    Parameters
+    -----------
+    date_array : ndarray
+        array of python datetime objects
 
-
-def intervals(times):
+    Returns
+    --------
+    ndarray
+        datetime.timedelta() objects
     """
-    given an array of timestamps,
-    returns an array of separation times between the timestamps
-    """
-    shifted_times= times[:-1]
-    shifted_times = np.insert(shifted_times,0,0) ## add zero to beginning to array
-    seps= times - shifted_times
-    seps=seps[1:] # remove dummy first element
+    return np.diff(date_array)
 
-    return seps
-
-def build_time_map(timeserie):
+def _provide_prepost(df, time_unit):
     """
+    Based on a pandas DataFrame with in the index the timestamps and
+    in the columns the data, two colomns are added, called date_pre and
+    date_post with datetime.timedelta values
+
+    Parameters
+    ------------
+    df : dframe
+        pandas dataframe
+    time_unit : str (sec, min, hour or day)
+        unit to express the time gap
+    """
+    diffs = _intervals(df.index.to_pydatetime())
+
+    if time_unit == 'sec':
+        diffs = [gap.total_seconds() for gap in diffs]
+    elif time_unit == 'min':
+        diffs = [gap.total_seconds()/60. for gap in diffs]
+    elif time_unit == 'hour':
+        diffs = [gap.total_seconds()/60./60. for gap in diffs]
+    elif time_unit == 'day':
+        diffs = [gap.total_seconds()/60./60./24. for gap in diffs]
+    elif time_unit == 'month':
+        diffs = [gap.total_seconds()/60./60./24./30. for gap in diffs]
+    else:
+        raise Exception("Only sec, min, hour and day supported!")
+
+    df[''.join(['Time before (',time_unit,')'])] = \
+                                    np.concatenate((np.array([np.nan]), diffs))
+    df[''.join(['Time after (',time_unit,')'])] = \
+                                    np.concatenate((diffs, np.array([np.nan])))
+
+def time_map_density(df, time_unit='sec', *args, **kwargs):
+    """time maps creation of a time series dataframe
+
+    As proposed by Max Watson in his paper to improve the plotting of dicrete
+    event time series, this fucntion implements the visualisation based on a
+    pandas dataframe containing the dates in the index.
+
+    Discrete event can be used to count number of occurences of any event.
+
+    In contrast to the original proposed implementation by Max Watson,
+    the provided functions of pandas and seaborn are exploited here.
+
+    The density is shown as a hexbin
 
     Parameters
     -----------
-    timeserie : pd.Series
+    timeserie : pd.DataFrame of Series
+        The dataset with in the index the datetime information
+    time_unit : str (sec, min, hour or day)
+        unit to express the time gap in the plot
+    *args, **kwargs :
+        passed to matplotlib hexbin function
 
+    Notes
+    ------
+    https://github.com/maxcw/time-maps
+
+    See Also
+    ---------
+    time_map_varcolor
     """
-    xcoords, ycoords = _get_prepost_values(timeserie)
+    _provide_prepost(df, time_unit)
 
-    plt.subplot(121) # first, a plot of the points themselves
+    # Set time_unit
+    x = ''.join(['Time before (', time_unit, ')'])
+    y = ''.join(['Time after (', time_unit, ')'])
 
-    plt.plot(xcoords,ycoords,'b.')
+    fig, axs = plt.subplots()
+    clab = axs.hexbin(df[x].values,df[y].values, *args, **kwargs)
+    fig.colorbar(clab)
+    axs.set_xlabel(''.join(('Time before (', time_unit, ')')))
+    axs.set_ylabel(''.join(('Time after (', time_unit, ')')))
+    #cbar = plt.colorbar()
+    #cbar.ax.set_ylabel('Counts')
+    #axs = sns.jointplot(x, y, data=df,
+    #              kind='hex', stat_func=None)
+    return axs
 
-    plt.xlim((0,1))
-    plt.ylim((0,1))
+def time_map_varcolor(df, variable,  time_unit='sec', *args, **kwargs):
+    """time maps creation of a time series dataframe
 
-    plt.subplot(122) # let's make a heatmap
+    As proposed by Max Watson in his paper to improve the plotting of dicrete
+    event time series, this fucntion implements the visualisation based on a
+    pandas dataframe containing the dates in the index.
 
-    Nside=1024 # this is the number of bins along x and y.
+    Discrete event can be used to count number of occurences of any event.
 
-    H = np.zeros((Nside,Nside)) # the 'histogram' matrix that counts the number of points in each grid-square
+    In contrast to the original proposed implementation by Max Watson,
+    the provided functions of pandas and seaborn are exploited here.
 
-    x_heat = (Nside-1)*xcoords # the xy coordinates scaled to the size of the matrix
-    y_heat = (Nside-1)*ycoords # subtract 1 since Python starts counting at 0, unlike Fortran and R
+    As opposed to the density implementation, the coloring is according to an
+    extra variable, listed in the dframe
 
-    for i in range(len(xcoords)): # loop over all points to calculate the population of each bin
+    Parameters
+    -----------
+    timeserie : pd.DataFrame of Series
+        The dataset with in the index the datetime information
+    variable : str
+        variable part of the data columns
+    time_unit : str (sec, min, hour or day)
+        unit to express the time gap in the plot
+    *args, **kwargs :
+        passed to matplotlib scatter plot
 
-    	H[int(x_heat[i]), int(y_heat[i])] = H[int(x_heat[i]), int(y_heat[i])] + 1 # int() outputs an integer.
+    Notes
+    ------
+    https://github.com/maxcw/time-maps
 
-    	# in Python, the above line can actually be accomplished more compactly:
-    	# H[x_heat[i], y_heat[i]]  +=1
+    See Also
+    ---------
+    time_map_density
+    """
+    if not variable in df.columns:
+        raise Exception("variable not part of the dframe")
 
-    H = ndi.gaussian_filter(H,8) # here, 8 specifies the width of the Gaussian kernel in the x and y directions
-    H = np.transpose(H) # so that the orientation is the same as the scatter plot
-    # to bring out the individual points more, you can do: H=np.sqrt(H)
-    plt.imshow(H, origin='lower')
+    _provide_prepost(df, time_unit)
 
-    plt.show()
+    # Set time_unit
+    x = ''.join(['Time before (', time_unit, ')'])
+    y = ''.join(['Time after (', time_unit, ')'])
+
+    fig, axs = plt.subplots()
+    axs.scatter(df[x], df[y], c=df[variable], *args, **kwargs)
+
+    return axs
 
 
-rain = pd.read_csv("rain_data_sample.txt")
+if __name__ == '__main__':
 
+#    #rain = pd.read_csv("rain_data_sample.txt", index_col=0,
+#    #                   header=None, names=['rain'], parse_dates=True)
+    data = pd.read_csv("data_brach_case_nete.csv", index_col=0,
+                       parse_dates=True)
 
+    # WET DAYS EXAMPLE
+    # select raining days only
+    rainy_moments = data[data['rain'].values > 0.]
+
+    #create example plots
+    time_map_density(rainy_moments, time_unit='hour', cmap='Blues',
+                     gridsize=20,xscale='log', yscale='log',vmax=150)
+    #time_map_varcolor(rainy_moments, 'rain', time_unit='hour', cmap='Blues')
+
+    ####
+    dateparse = lambda x: pd.datetime.strptime(x, '%Y%m')
+    data = pd.read_csv("tijdelijke-werkloosheid.csv",sep=';', index_col=0,
+                       parse_dates=0, date_parser=dateparse)
+
+    worklow = data[data["Aantal personen"].values > 50]
+
+    time_map_varcolor(worklow, "Aantal personen", time_unit='month',
+                      cmap='Blues')
+    time_map_density(worklow, time_unit='month', cmap='Blues',
+                     gridsize=20, vmax=150)
 
 
